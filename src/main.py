@@ -11,9 +11,7 @@ def main():
     maze = maze.create_maze_dfs()
 
     visualize_maze(maze,a_star)
-
-    output_name = "test"
-    # save_solution(maze, start, goal, path, algorithm, output_name, _time)
+    visualize_maze(maze,bfs)
 
 
 if __name__ == '__main__':
