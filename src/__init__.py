@@ -1,4 +1,5 @@
 import random
+import numpy as np 
 
 class Maze:
     def __init__(self, width, height):
@@ -9,7 +10,7 @@ class Maze:
         m = self.height
         n = self.width
 
-        maze = [[0]*(2*n+1) for _ in range(2*m+1)]
+        maze = np.zeros((2*m + 1, 2*n + 1), dtype=int)
 
         directions = [(-2,0),(2,0),(0,-2),(0,2)]
 

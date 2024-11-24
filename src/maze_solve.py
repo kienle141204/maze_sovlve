@@ -26,23 +26,24 @@ def bfs(maze, start, goal):
     directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
     q = Queue()
-    q.put((start,0))
+    q.put(start)
+    visited[start[0]][start[1]] = 1
 
     while not q.empty():
-        current, step = q.get()
+        current = q.get()
 
         if current == goal:
-            return step, re_path(maze, came_from, current)
+            return re_path(maze, came_from, current)
         
         for dx, dy in directions:
             new_state = (current[0] + dx, current[1] + dy)
 
-            if 0 < new_state[0] < rows and 0 < new_state[1] < cols and visited[new_state[0]][new_state[1]] == 0:
+            if 0 <= new_state[0] < rows and 0 <= new_state[1] < cols and visited[new_state[0]][new_state[1]] == 0:
                 if maze[new_state[0]][new_state[1]] != 0:
                     came_from[new_state] = current
                     visited[new_state[0]][new_state[1]] = 1
-                    q.put((new_state,step + 1))
-    return None
+                    q.put(new_state)
+    return []
 
 
 # A STAR
