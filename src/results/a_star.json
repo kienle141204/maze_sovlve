@@ -1,0 +1,21 @@
+{
+    "maze shape": [
+        21,
+        21
+    ],
+    "start": [
+        7,
+        11
+    ],
+    "goal": [
+        7,
+        12
+    ],
+    "algorithm": "a_star",
+    "steps": 2,
+    "solution": [
+        "7, 11",
+        "7, 12"
+    ],
+    "execution_time": 0.0
+}

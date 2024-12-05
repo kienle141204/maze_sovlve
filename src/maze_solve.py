@@ -1,5 +1,7 @@
 from queue import Queue
 from queue import PriorityQueue
+import random
+import math
 
 def re_path(maze, came_from, current):
     path = [current]
@@ -16,7 +18,7 @@ def draw_path(maze, path):
         maze[x][y] = 2
 
 # BFS
-def bfs(maze, start, goal):
+def bfs(maze, start, goal, blocks=[]):
     rows = len(maze)
     cols = len(maze[0])
 
@@ -39,7 +41,7 @@ def bfs(maze, start, goal):
             new_state = (current[0] + dx, current[1] + dy)
 
             if 0 <= new_state[0] < rows and 0 <= new_state[1] < cols and visited[new_state[0]][new_state[1]] == 0:
-                if maze[new_state[0]][new_state[1]] != 0:
+                if maze[new_state[0]][new_state[1]] != 0 and (new_state[0], new_state[1]) not in blocks:
                     came_from[new_state] = current
                     visited[new_state[0]][new_state[1]] = 1
                     q.put(new_state)
@@ -81,6 +83,97 @@ def a_star(maze, start, goal):
                     pq.put((new_f, new_state))
     return None
 
+
+def distance_to_checkpoint(maze, check_points, start, goal):
+    rows, cols = len(maze), len(maze[0])
+    m = len(check_points)
+
+    new_check_points = [start] + check_points + [goal]
+    d = {}
+
+    for i in range(m+2):
+        for j in range(i+1, m+2):
+            distance = 0
+            if (new_check_points[i], new_check_points[j]) not in d:
+                path = bfs(maze, new_check_points[i], new_check_points[j])
+                if path is not None:
+                    distance = len(path)
+                d[(new_check_points[i], new_check_points[j])] = distance
+                d[(new_check_points[j], new_check_points[i])] = distance
+
+    return d
+def total_distance(maze, start, goal, check_points,d):
+    n = len(check_points)
+    res = 0
+    res += d[(start, check_points[0])]
+    for i in range(n-1):
+        res += d[(check_points[i], check_points[i+1])]
+    res += d[(check_points[n-1], goal)]
+
+    return res
+
+def simulated_annealing(maze, check_points, start, goal):
+    d = distance_to_checkpoint(maze, check_points, start, goal)
+
+    if len(check_points) == 1:
+        path = []
+        path1 = bfs(maze,start, check_points[0], [goal])
+        path2 = bfs(maze, check_points[0], goal, [start])
+        if path1 == [] or path2 ==[]:
+            return 0,0,0
+        else:
+            path = path1[:] + path2[:]
+        # draw_path(maze, path)
+        return total_distance(maze, start, goal, check_points, d), check_points, path
+    rows, cols = len(maze), len(maze[0])
+    T = 1000
+    T_min = 0.0001
+    cooling_rate = 0.95
+
+    current_checkpoints = check_points[:]
+    best_checkpoints = current_checkpoints[:]
+    best_cost = total_distance(maze, start, goal, current_checkpoints, d)
+    current_t = T
+
+    while current_t > T_min:
+        new_checkpoints = current_checkpoints[:]
+        i, j = random.sample(range(len(check_points)),2)
+        new_checkpoints[i], new_checkpoints[j] = new_checkpoints[j], new_checkpoints[i]
+
+        current_cost = total_distance(maze, start, goal, current_checkpoints, d)
+        new_cost = total_distance(maze, start, goal, new_checkpoints, d)
+        delta_cost = new_cost - current_cost
+
+        if delta_cost < 0 or random.uniform(0, 1) < math.exp(-delta_cost/current_t):
+            current_checkpoints = new_checkpoints[:]
+            if new_cost < best_cost:
+                best_cost = new_cost
+                best_checkpoints = current_checkpoints[:]
+
+        current_t = current_t * cooling_rate
+
+    if best_checkpoints == []:
+        return 0,0,0
+    path = []
+    path1 = bfs(maze, start, best_checkpoints[0],[goal])
+    if path1 == []:
+        return 0,0,0
+    else:
+        path += path1[:]
+    for i in range(0, len(best_checkpoints)-1):
+        path2 = bfs(maze, best_checkpoints[i], best_checkpoints[i+1], [goal])
+        if path2 == []:
+            return 0,0,0
+        else:
+            path += path2[:]
+    path3 = bfs(maze, best_checkpoints[-1], goal, [start])
+    if path3 == []:
+        return 0,0,0
+    else:
+        path += path3[:]
+    # draw_path(maze, path)
+
+    return best_cost, best_checkpoints, path
 
 
 

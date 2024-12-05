@@ -5,13 +5,13 @@ from matplotlib.colors import ListedColormap
 import time
 from utils import save_solution
 from __init__ import Maze
-from maze_solve import bfs, a_star
+from maze_solve import bfs, a_star, simulated_annealing
 
 import tkinter as tk
 from tkinter import ttk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-def show_algorithm_results(algorithm, maze, frame, title, points):
+def show_algorithm_results(algorithm, maze, frame, title, points, n=0):
     fig, ax = plt.subplots(figsize=(6, 6))
     canvas = FigureCanvasTkAgg(fig, master=frame)
     canvas_widget = canvas.get_tk_widget()
@@ -32,25 +32,36 @@ def show_algorithm_results(algorithm, maze, frame, title, points):
     goal_label.pack(pady=5)
 
     def on_click(event):
-        if len(points) < 2:
-            x, y = int(round(event.ydata)) , int(round(event.xdata))
+        if len(points) < 2 + n:
+            x, y = int(round(event.ydata)), int(round(event.xdata))
 
             if 0 <= x < maze.shape[0] and 0 <= y < maze.shape[1]:
                 if maze[x][y] != 0 and (x, y) not in points:
                     points.append((x,y))
-                    ax.scatter(y,x, c="red", s=25)
+                    if len(points) <= 2:
+                        ax.scatter(y, x, c="red", s=25)
+                    else:
+                        ax.scatter(y, x, c="blue", s=25)
                     canvas.draw()
 
-                    if len(points) == 2:
+                    if len(points) == 2 + n:
                         start, goal = points[0] , points[1]
                         print(f"Start: {start}, Goal: {goal}")
 
-                        st = time.time()
-                        path = algorithm(maze, start, goal)
-                        et = time.time()
-                        _time = et - st
+                        if n == 0:
+                            st = time.time()
+                            path = algorithm(maze, start, goal)
+                            et = time.time()
+                            _time = et - st
+                        else:
+                            st = time.time()
+                            _, b, path = simulated_annealing(maze, points[2:], points[0], points[1])
+                            print(f"thứ tự đi qua tối ưu là :  start -> {b} -> goal")
+                            et = time.time()
+                            _time = et - st
 
-                        time_label.config(text=f"Thời gian: {_time:.4f} giây")
+
+                        time_label.config(text=f"Thời gian: {_time:.8f} giây")
                         start_label.config(text=f"Start: {start}")
                         goal_label.config(text=f"Goal: {goal}")
 
@@ -61,13 +72,15 @@ def show_algorithm_results(algorithm, maze, frame, title, points):
                             colored_maze = maze.copy()
                             for x, y in path:
                                 colored_maze[x][y] = 2
-
                             cmap = ListedColormap(["black","white","green"])
                             ax.imshow(colored_maze, cmap=cmap)
                             ax.set_title(f"{title}")
 
                             for x, y in points:
-                                ax.scatter(y, x, c="red", s=25)
+                                if (x,y) == points[0] or (x,y)==points[1]:
+                                    ax.scatter(y, x, c="red", s=25)
+                                else:
+                                    ax.scatter(y,x,c="blue", s=25)
 
                             canvas.draw()
 
@@ -85,7 +98,7 @@ def show_algorithm_results(algorithm, maze, frame, title, points):
     canvas.mpl_connect("button_press_event", on_click)    
     return time_label, length_label, start_label, goal_label
 
-def visualize_maze(maze):
+def visualize_maze(maze, n):
     root = tk.Tk()
     root.title("akye")
     root.geometry("1200x800")
@@ -93,31 +106,46 @@ def visualize_maze(maze):
     main_frame = ttk.Frame(root)
     main_frame.pack(fill=tk.BOTH, expand=True)
 
-    bfs_frame = ttk.Frame(main_frame)
-    bfs_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
 
-    a_star_frame = ttk.Frame(main_frame)
-    a_star_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=5)
+    if n == 0:
+        bfs_frame = ttk.Frame(main_frame)
+        bfs_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
 
-    bfs_points = []
-    a_star_points = []
+        a_star_frame = ttk.Frame(main_frame)
+        a_star_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=5)
 
-    bfs_time_label, bfs_length_label, bfs_start_label, bfs_goal_label = show_algorithm_results(bfs, maze, bfs_frame, "BFS", bfs_points)
+        bfs_points = []
+        a_star_points = []
 
-    a_star_time_label, a_star_length_label, a_star_start_label, a_star_goal_label = show_algorithm_results(a_star, maze, a_star_frame, "A STAR", a_star_points)
+        show_algorithm_results(bfs, maze, bfs_frame, "BFS", bfs_points, n)
+
+        show_algorithm_results(a_star, maze, a_star_frame, "A STAR", a_star_points, n)
+    else:
+        frame = ttk.Frame(main_frame)
+        frame.pack(fill=tk.BOTH, expand=True, padx=5)
+
+        _points = []
+        show_algorithm_results(bfs, maze, frame,"aaa", _points, n)
+
 
     def reset():
-        bfs_points.clear()
-        a_star_points.clear()
+        if n==0:
+            bfs_points.clear()
+            a_star_points.clear()
 
-        for widget in bfs_frame.winfo_children():
-            widget.destroy()
-        for widget in a_star_frame.winfo_children():
-            widget.destroy()
+            for widget in bfs_frame.winfo_children():
+                widget.destroy()
+            for widget in a_star_frame.winfo_children():
+                widget.destroy()
 
-        bfs_time_label, bfs_length_label, bfs_start_label, bfs_goal_label = show_algorithm_results(bfs, maze, bfs_frame, "BFS", bfs_points)
+            show_algorithm_results(bfs, maze, bfs_frame, "BFS", bfs_points,n)
 
-        a_star_time_label, a_star_length_label, a_star_start_label, a_star_goal_label = show_algorithm_results(a_star, maze, a_star_frame, "A STAR", a_star_points)
+            show_algorithm_results(a_star, maze, a_star_frame, "A STAR", a_star_points,n)
+        else:
+            _points.clear()
+            for widget in frame.winfo_children():
+                widget.destroy()
+            show_algorithm_results(bfs, maze, frame, "aaa", _points, n)
 
     reset_button = ttk.Button(root, text="Reset", command=reset)
     reset_button.pack(side=tk.BOTTOM, pady=10)
@@ -131,7 +159,3 @@ def visualize_maze(maze):
 
     root.mainloop()
 
-
-maze = Maze(100, 100)
-maze = maze.create_maze_dfs()
-visualize_maze(maze)
